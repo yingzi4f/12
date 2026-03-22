@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: hangkong-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: hangkong
+      TZ: Asia/Shanghai
+    ports:
+      - "3309:3306"
+    volumes:
+      - ./hangkong.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql-data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 前台页面
+  client-home:
+    build:
+      context: ./vue/client_home
+      dockerfile: Dockerfile
+    container_name: hangkong-client-home
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./vue/client_home:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    networks:
+      - hangkong-network
+
+  # 后台管理系统
+  client-admin:
+    build:
+      context: ./vue/client_admin
+      dockerfile: Dockerfile
+    container_name: hangkong-client-admin
+    restart: always
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./vue/client_admin:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    networks:
+      - hangkong-network
+
+networks:
+  hangkong-network:
+    driver: bridge
+
+volumes:
+  mysql-data:

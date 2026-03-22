@@ -1,0 +1,48 @@
+# Java
+*.class
+*.jar
+*.war
+*.ear
+target/
+*.log
+
+# Maven
+server/target/
+server/.mvn/
+server/mvnw
+server/mvnw.cmd
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Vue
+vue/client_admin/dist/
+vue/client_admin/node_modules/
+vue/client_home/dist/
+vue/client_home/node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+
+# Logs
+*.log
+/tmp/
+*.tmp
+
+# Database
+*.sql.bak
+
+# Docker
+docker-compose.override.yml
+
+# OS
+.DS_Store
+Thumbs.db
