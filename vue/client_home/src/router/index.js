@@ -101,17 +101,23 @@ const routes = [
 		name: '/flight_information_details',
 		component: () => import('../views/flight_information/details.vue')
 	},
-	//疫情政策列表路由
+	//航空购票路由
 	{
-		path: '/epidemic_policy/list',
-		name: '/epidemic_policy_list',
-		component: () => import('../views/epidemic_policy/list.vue')
+		path: '/flight/booking',
+		name: 'flight_booking',
+		component: () => import('../views/flight/booking.vue')
 	},
-	//疫情政策详情路由
+	//选座页面路由
 	{
-		path: '/epidemic_policy/details',
-		name: '/epidemic_policy_details',
-		component: () => import('../views/epidemic_policy/details.vue')
+		path: '/flight/seat-selection',
+		name: 'seat_selection',
+		component: () => import('../views/flight/seat_selection.vue')
+	},
+	//航空信息路由
+	{
+		path: '/flight/info',
+		name: 'flight_info',
+		component: () => import('../views/flight/info.vue')
 	},
 	//余额充值添加路由
 	{
@@ -144,6 +150,12 @@ const routes = [
 		name: 'user_password',
 		component: () => import('../views/user/password.vue')
 	},
+	// 我的订单
+	{
+		path: '/user/order',
+		name: 'user_order',
+		component: () => import('../views/user/order.vue')
+	},
 
 	// 搜索
 	{
@@ -166,9 +178,9 @@ const router = new VueRouter({
 })
 
 router.afterEach((to, from, next) => {
-	let title = "基于Hadoop的航空购票管理系统-home";
+	let title = "基于Hadoop的航班分析系统的设计与实现-home";
 	document.title = title;
-	document.logo = "基于Hadoop的航空购票管理系统"
+	document.logo = "基于Hadoop的航班分析系统的设计与实现"
 })
 
 export default router

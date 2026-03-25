@@ -64,7 +64,7 @@
         <el-row>
           <el-col :span="24">
             <div class="full-width-chart-container">
-              <div class="chart-title">各出发地航班数量</div>
+              <div class="chart-title">目的地分布</div>
               <div id="departureChart" class="full-width-chart"></div>
             </div>
           </el-col>
@@ -74,7 +74,25 @@
           <el-col :span="24">
             <div class="full-width-chart-container">
               <div class="chart-title">剩余票数分布</div>
-              <div id="votesChart" class="full-width-chart"></div>
+              <div class="votes-grid-container">
+                <div v-for="(item, index) in topVotesFlights" :key="index" class="vote-card-frame">
+                  <div class="vote-card-inner">
+                    <div class="vote-card-header">
+                      <i class="el-icon-tickets"></i>
+                      <span class="flight-id">航班 {{ item.flight_information_id }}</span>
+                    </div>
+                    <div class="vote-card-body">
+                      <div class="vote-count">{{ item.remaining_votes }}</div>
+                      <div class="vote-label">剩余票数</div>
+                    </div>
+                    <div class="vote-card-footer">
+                      <span class="departure">{{ item.place_of_departure }}</span>
+                      <i class="el-icon-d-arrow-right arrow-icon"></i>
+                      <span class="destination">{{ item.destination }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </el-col>
         </el-row>
@@ -82,7 +100,7 @@
         <el-row>
           <el-col :span="24">
             <div class="full-width-chart-container">
-              <div class="chart-title">点击量TOP5航班</div>
+              <div class="chart-title">TOP5航班点击量</div>
               <div id="hitsChart" class="full-width-chart"></div>
             </div>
           </el-col>
@@ -91,8 +109,8 @@
         <el-row>
           <el-col :span="24">
             <div class="full-width-chart-container">
-              <div class="chart-title">票价与剩余票数关系</div>
-              <div id="priceVotesChart" class="full-width-chart"></div>
+              <div class="chart-title">出发地数量统计</div>
+              <div id="hotDestinationChart" class="full-width-chart"></div>
             </div>
           </el-col>
         </el-row>
@@ -124,9 +142,8 @@ export default {
         flightType: ''
       },
       departureChart: null,
-      votesChart: null,
       hitsChart: null,
-      priceVotesChart: null,
+      hotDestinationChart: null,
       chartsInitialized: false
     };
   },
@@ -143,6 +160,11 @@ export default {
         data = data.filter(item => item.flight_type === this.filters.flightType);
       }
       return data;
+    },
+    topVotesFlights() {
+      return [...this.filteredFlightData]
+        .sort((a, b) => b.remaining_votes - a.remaining_votes)
+        .slice(0, 12); // 显示前12个航班
     },
     departureOptions() {
       return [...new Set(this.flightData.map(item => item.place_of_departure))];
@@ -201,12 +223,12 @@ export default {
 
     async fetchFlightData() {
       try {
-        const res = await this.$get("http://127.0.0.1:5000/api/flight_information/get_list?like=0&size=70000&page=1&orderby=create_time%20desc");
-        
+        const res = await this.$get("http://127.0.0.1:5000/api/flight_information/get_list?like=0&size=100000&page=1&orderby=create_time%20desc");
+
         if (res && res.result && res.result.list) {
           this.flightData = this.processFlightData(res.result.list);
           this.$message.success(`成功加载${this.flightData.length}条航班数据`);
-          
+
           this.$nextTick(() => {
             if (this.chartsInitialized) {
               this.updateCharts();
@@ -228,17 +250,15 @@ export default {
       this.$nextTick(() => {
         try {
           this.departureChart = echarts.init(document.getElementById('departureChart'));
-          this.votesChart = echarts.init(document.getElementById('votesChart'));
           this.hitsChart = echarts.init(document.getElementById('hitsChart'));
-          this.priceVotesChart = echarts.init(document.getElementById('priceVotesChart'));
-          
+          this.hotDestinationChart = echarts.init(document.getElementById('hotDestinationChart'));
+
           this.chartsInitialized = true;
-          
+
           window.addEventListener('resize', () => {
             this.departureChart && this.departureChart.resize();
-            this.votesChart && this.votesChart.resize();
             this.hitsChart && this.hitsChart.resize();
-            this.priceVotesChart && this.priceVotesChart.resize();
+            this.hotDestinationChart && this.hotDestinationChart.resize();
           });
         } catch (error) {
           console.error('图表初始化失败:', error);
@@ -253,88 +273,84 @@ export default {
       }
       
       try {
-        // 1. 各出发地航班数量柱状图
-        const departureCount = {};
+        // 1. 目的地分布柱状图
+        const destinationCount = {};
         this.filteredFlightData.forEach(item => {
-          const departure = item.place_of_departure;
-          departureCount[departure] = (departureCount[departure] || 0) + 1;
+          const dest = item.destination;
+          destinationCount[dest] = (destinationCount[dest] || 0) + 1;
         });
-        
+
+        // 按数量排序，取前15个
+        const sortedDestinations = Object.entries(destinationCount)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 15);
+
         this.departureChart.setOption({
-          tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-          xAxis: { type: 'category', data: Object.keys(departureCount) },
-          yAxis: { type: 'value', name: '航班数量' },
-          series: [{ data: Object.values(departureCount), type: 'bar', itemStyle: { color: '#409EFF' } }]
+          tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' },
+            formatter: function(params) {
+              return `${params[0].name}<br/>航班数量: ${params[0].value}`;
+            }
+          },
+          grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+          },
+          xAxis: {
+            type: 'category',
+            data: sortedDestinations.map(item => item[0]),
+            axisLabel: {
+              interval: 0,
+              rotate: 30
+            }
+          },
+          yAxis: {
+            type: 'value',
+            name: '航班数量',
+            minInterval: 1
+          },
+          series: [{
+            data: sortedDestinations.map(item => item[1]),
+            type: 'bar',
+            barWidth: '60%',
+            itemStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: '#83bff6' },
+                { offset: 0.5, color: '#188df0' },
+                { offset: 1, color: '#188df0' }
+              ])
+            },
+            emphasis: {
+              itemStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: '#2378f7' },
+                  { offset: 0.7, color: '#2378f7' },
+                  { offset: 1, color: '#83bff6' }
+                ])
+              }
+            },
+            label: {
+              show: true,
+              position: 'top',
+              formatter: '{c}',
+              color: '#333',
+              fontSize: 12
+            }
+          }]
         });
 
-         // 2. 剩余票数分布饼图 - 只显示前5个主要航班，其余归为"其他"
-  const sortedVotesData = [...this.filteredFlightData]
-    .sort((a, b) => b.remaining_votes - a.remaining_votes);
-  
-  const topN = 100; // 显示前5个主要航班
-  const mainData = sortedVotesData.slice(0, topN);
-  const otherData = sortedVotesData.slice(topN);
-  
-  const otherTotal = otherData.reduce((sum, item) => sum + item.remaining_votes, 0);
-  
-  const votesData = [
-    ...mainData.map(item => ({
-      value: item.remaining_votes,
-      name: `航班${item.flight_information_id}`
-    })),
-    {
-      value: otherTotal,
-      name: '其他航班'
-    }
-  ];
-  
-  this.votesChart.setOption({
-    tooltip: { 
-      trigger: 'item', 
-      formatter: '{a} <br/>{b}: {c} ({d}%)' 
-    },
-    legend: {
-      orient: 'vertical',
-      right: 10,
-      top: 'center',
-      data: votesData.map(item => item.name),
-      itemWidth: 10,
-      itemHeight: 10,
-      textStyle: {
-        fontSize: 12
-      }
-    },
-    series: [{
-      name: '剩余票数',
-      type: 'pie',
-      center: ['40%', '50%'],
-      radius: ['50%', '70%'],
-      avoidLabelOverlap: false,
-      label: { 
-        show: false, 
-        position: 'center' 
-      },
-      emphasis: { 
-        label: { 
-          show: true, 
-          fontSize: '18', 
-          fontWeight: 'bold' 
-        } 
-      },
-      labelLine: { show: false },
-      data: votesData
-    }]
-  });
-
-        // 3. 点击量TOP5航班条形图
+        // 3. TOP5航班点击量条形图
         const topHits = [...this.filteredFlightData]
           .sort((a, b) => b.hits - a.hits)
           .slice(0, 5);
-        
+
         this.hitsChart.setOption({
           tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
           xAxis: { type: 'value', name: '点击量' },
-          yAxis: { type: 'category', data: topHits.map(item => `航班${item.flight_information_id}`) },
+          yAxis: { type: 'category', data: topHits.map(item => `${item.place_of_departure} → ${item.destination}`) },
           series: [{
             name: '点击量',
             type: 'bar',
@@ -343,26 +359,68 @@ export default {
           }]
         });
 
-        // 4. 票价与剩余票数关系散点图
-        const priceVotesData = this.filteredFlightData.map(item => [
-          item.priceValue,
-          item.remaining_votes,
-          item.flight_information_id
-        ]);
-        
-        this.priceVotesChart.setOption({
+        // 4. 出发地数量统计柱状图
+        const departureCount = {};
+        this.filteredFlightData.forEach(item => {
+          const departure = item.place_of_departure;
+          departureCount[departure] = (departureCount[departure] || 0) + 1;
+        });
+
+        // 按数量排序，取前15个
+        const sortedDepartures = Object.entries(departureCount)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 15);
+
+        this.hotDestinationChart.setOption({
           tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' },
             formatter: function (params) {
-              return `航班${params.value[2]}<br/>票价: ${params.value[0]}<br/>剩余票数: ${params.value[1]}`;
+              return `${params[0].name}<br/>航班数量: ${params[0].value}`;
             }
           },
-          xAxis: { type: 'value', name: '票价', nameLocation: 'end', nameGap: 15 },
-          yAxis: { type: 'value', name: '剩余票数', nameLocation: 'end', nameGap: 15 },
+          grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+          },
+          xAxis: {
+            type: 'category',
+            data: sortedDepartures.map(item => item[0]),
+            axisLabel: {
+              interval: 0,
+              rotate: 45
+            }
+          },
+          yAxis: {
+            type: 'value',
+            name: '航班数量'
+          },
           series: [{
-            type: 'scatter',
-            data: priceVotesData,
-            symbolSize: function (data) { return Math.sqrt(data[1]) * 2; },
-            itemStyle: { color: '#E6A23C' }
+            name: '航班数量',
+            type: 'bar',
+            data: sortedDepartures.map(item => item[1]),
+            itemStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: '#f093fb' },
+                { offset: 0.5, color: '#f5576c' },
+                { offset: 1, color: '#f5576c' }
+              ])
+            },
+            emphasis: {
+              itemStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: '#f093fb' },
+                  { offset: 1, color: '#f5576c' }
+                ])
+              }
+            },
+            label: {
+              show: true,
+              position: 'top',
+              formatter: '{c}'
+            }
           }]
         });
 
@@ -448,13 +506,111 @@ export default {
   .el-col {
     width: 100%;
   }
-  
+
   .stat-card {
     margin-bottom: 15px;
   }
-  
+
   .full-width-chart {
     height: 350px;
   }
+}
+
+/* 剩余票数卡片网格样式 */
+.votes-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  padding: 10px;
+}
+
+.vote-card-frame {
+  position: relative;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 8px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.vote-card-frame:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+}
+
+.vote-card-inner {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.vote-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f0f0f0;
+  margin-bottom: 12px;
+}
+
+.vote-card-header i {
+  font-size: 20px;
+  color: #667eea;
+}
+
+.flight-id {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.vote-card-body {
+  text-align: center;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.vote-count {
+  font-size: 48px;
+  font-weight: bold;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.vote-label {
+  font-size: 14px;
+  color: #999;
+}
+
+.vote-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 2px solid #f0f0f0;
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.departure, .destination {
+  color: #666;
+  font-weight: 500;
+}
+
+.arrow-icon {
+  color: #667eea;
+  font-size: 14px;
 }
 </style>

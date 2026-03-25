@@ -4,7 +4,7 @@
 			<el-row>
 				<el-col>
 					<el-form :model="form" :rules="rules" ref="form" label-width="60px" class="form">
-						<h1>基于Hadoop的航空购票管理系统</h1>
+						<h1>基于Hadoop的航班分析系统的设计与实现</h1>
 						
 						<el-form-item label="账号" prop="account">
 							<el-input type="text" v-model="form.account" placeholder="用户名 / 手机 / 邮箱">

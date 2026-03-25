@@ -55,12 +55,6 @@
 				source_table="flight_information"
 			  ></list_result_search>
 			  <list_result_search
-				v-if="$check_action('/epidemic_policy/list', 'get')"
-				:list="result_epidemic_policy_region_name"
-				title="疫情政策地区名称"
-				source_table="epidemic_policy"
-			  ></list_result_search>
-			  <list_result_search
 				v-if="$check_action('/order_center/list', 'get')"
 				:list="result_order_center_place_of_departure"
 				title="订单中心出发地"
@@ -237,7 +231,6 @@ export default {
 			"result_flight_information_destination":[],
 			"result_flight_information_departure_time":[],
 			"result_flight_information_flight_type":[],
-			"result_epidemic_policy_region_name":[],
 			"result_order_center_place_of_departure":[],
 			"result_order_center_destination":[],
 			"result_order_center_departure_time":[],
@@ -355,18 +348,6 @@ export default {
 			var result_flight_information_flight_type = json.result.list;
 			result_flight_information_flight_type.map(o => o.title = o['flight_type'])
 	  			this.result_flight_information_flight_type = result_flight_information_flight_type
-		 	}
-		});
-	},
-	/**
-	 * 获取region_name
-	 */
-	get_epidemic_policy_region_name(){
-		this.$get("~/api/epidemic_policy/get_list?like=0", { page: 1, size: 10, "region_name": this.query.word }, (json) => {
-		  if (json.result) {
-			var result_epidemic_policy_region_name = json.result.list;
-			result_epidemic_policy_region_name.map(o => o.title = o['region_name'])
-	  			this.result_epidemic_policy_region_name = result_epidemic_policy_region_name
 		 	}
 		});
 	},
@@ -685,7 +666,6 @@ export default {
 		this.get_flight_information_destination();
 		this.get_flight_information_departure_time();
 		this.get_flight_information_flight_type();
-		this.get_epidemic_policy_region_name();
 		this.get_order_center_place_of_departure();
 		this.get_order_center_destination();
 		this.get_order_center_departure_time();
@@ -723,7 +703,6 @@ export default {
 	  this.get_flight_information_destination();
 	  this.get_flight_information_departure_time();
 	  this.get_flight_information_flight_type();
-	  this.get_epidemic_policy_region_name();
 	  this.get_order_center_place_of_departure();
 	  this.get_order_center_destination();
 	  this.get_order_center_departure_time();

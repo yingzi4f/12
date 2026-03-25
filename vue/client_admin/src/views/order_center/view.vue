@@ -114,7 +114,17 @@
 				</el-form-item>
 			</el-col>
 			<el-col :xs="24" :sm="24" :lg="24" class="el_form_item_warp">
-				<el-form-item label="选座" prop="seat">
+				<el-form-item label="已选座位" prop="seat">
+					<div v-if="form.seat" style="margin-bottom: 10px; padding: 10px; background: #f0f9ff; border-radius: 4px; border: 1px solid #409eff;">
+						<strong style="color: #409eff;">{{ formatSeatDisplay(form.seat) }}</strong>
+					</div>
+					<div v-else style="margin-bottom: 10px; padding: 10px; background: #f5f5f5; border-radius: 4px; color: #999;">
+						未选择座位
+					</div>
+				</el-form-item>
+			</el-col>
+			<el-col :xs="24" :sm="24" :lg="24" class="el_form_item_warp">
+				<el-form-item label="座位图" prop="seat">
 				  <div class="seat-wrapper">
 					<div class="illustration">
 					  <div class="illustration-img-wrapper unselected-seat"></div>
@@ -355,6 +365,120 @@
 			 * @param {Object} func
 			 */
 			get_obj_after(json, func){
+				// 获取订单详情后，初始化座位图
+				if (json.result && json.result.obj) {
+					this.initOrderSeat(json.result.obj);
+				}
+				if(func){
+					func(json);
+				}
+			},
+
+			// 初始化订单座位图
+			initOrderSeat(order) {
+				// 获取所有已售座位
+				this.$get("~/api/order_center/get_list", {}, (res) => {
+					if (res.result && res.result.list) {
+						let seatArr = "";
+						let list = res.result.list;
+
+						// 收集所有已售座位（排除当前订单）
+						for (let j = 0; j < list.length; j++) {
+							let seat = list[j].seat;
+							// 跳过当前订单的座位（这些座位应该显示为已选，不是已售）
+							if (list[j].order_center_id !== order.order_center_id && seat != null && seat != "") {
+								if (seatArr == "") {
+									seatArr = seat + "";
+								} else {
+									seatArr = seatArr + "," + seat;
+								}
+							}
+						}
+						this.seatList = seatArr;
+					}
+					this.initSeatArrayWithOrder(order);
+				});
+			},
+
+			// 初始化座位数组（包含当前订单的座位）
+			initSeatArrayWithOrder(order) {
+				let seatList = this.seatList;
+				let seatArr = seatList.split(",");
+				if (seatList == "" || seatList == null) {
+					seatArr = [];
+				}
+				this.seatArr = seatArr;
+
+				// 创建5行8列的座位数组
+				let seatArray = Array(this.seatRow)
+					.fill(0)
+					.map(() => Array(this.seatCol).fill(0));
+
+				// 标记已售座位（红色）
+				for (let j = 0; j < seatArr.length; j++) {
+					let i = Math.floor(seatArr[j] / 8);
+					let x = seatArr[j] % 8;
+					if (i < this.seatRow && x < this.seatCol) {
+						seatArray[i][x] = 2;
+					}
+				}
+
+				// 标记当前订单的座位为已选（绿色）
+				if (order.seat) {
+					let orderSeats = order.seat.split(",");
+					for (let k = 0; k < orderSeats.length; k++) {
+						let seatIndex = parseInt(orderSeats[k]);
+						if (!isNaN(seatIndex)) {
+							// 注意：前端选座用的是6列布局，这里需要适配
+							let i = Math.floor(seatIndex / 6);
+							let x = seatIndex % 6;
+							if (i < this.seatRow && x < 6) {
+								seatArray[i][x] = 1; // 标记为已选
+							}
+						}
+					}
+				}
+
+				this.seatArray = seatArray;
+
+				// 计算座位尺寸
+				this.$nextTick(() => {
+					if (this.$refs.innerSeatWrapper) {
+						this.seatSize = parseInt(
+							parseInt(
+								window.getComputedStyle(this.$refs.innerSeatWrapper).width,
+								10
+							) / this.seatCol,
+							10
+						);
+					}
+				});
+			},
+
+			// 格式化座位显示
+			formatSeatDisplay(seatStr) {
+				if (!seatStr) return '-';
+
+				try {
+					const seatIndices = seatStr.split(',');
+					const columns = ['A', 'B', 'C', 'D', 'E', 'F'];
+					const seatNames = [];
+
+					seatIndices.forEach(index => {
+						const num = parseInt(index.trim());
+						if (!isNaN(num)) {
+							const row = Math.floor(num / 6) + 1;
+							const col = num % 6;
+							const seatName = `${row}${columns[col]}`;
+							seatNames.push(seatName);
+						}
+					});
+
+					return seatNames.length > 0 ? seatNames.join(', ') : seatStr;
+				} catch (e) {
+					console.error('座位格式化错误:', e);
+					return seatStr;
+				}
 			},
 
 			is_view(){

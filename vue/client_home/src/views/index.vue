@@ -18,6 +18,36 @@
 		    </div>
 		</div>
 
+		<!-- 航班搜索栏 -->
+		<div class="warp">
+		    <div class="container">
+		        <div class="row">
+		            <div class="col-12">
+		                <div class="flight-search-bar">
+		                    <div class="search-title">航班搜索</div>
+		                    <div class="search-form">
+		                        <div class="search-field">
+		                            <label>出发地</label>
+		                            <el-input v-model="searchForm.departure" placeholder="请输入出发地" clearable></el-input>
+		                        </div>
+		                        <div class="search-field">
+		                            <label>目的地</label>
+		                            <el-input v-model="searchForm.destination" placeholder="请输入目的地" clearable></el-input>
+		                        </div>
+		                        <div class="search-field">
+		                            <label>出发日期</label>
+		                            <el-date-picker v-model="searchForm.date" type="date" placeholder="选择日期" value-format="yyyy-MM-dd" clearable></el-date-picker>
+		                        </div>
+		                        <div class="search-button">
+		                            <el-button type="primary" @click="searchFlight" icon="el-icon-search">搜索航班</el-button>
+		                        </div>
+		                    </div>
+		                </div>
+		            </div>
+		        </div>
+		    </div>
+		</div>
+
 		<div class="warp">
 		    <div class="container swiper_box">
 		        <div class="row">
@@ -196,64 +226,43 @@
 		    </div>
 		</div>
 		<!-- 推荐航班信息模块(结束) -->
-		<!-- 推荐疫情政策模块(开始) -->
+
+		<!-- 热门目的地推荐模块(开始) -->
 		<div class="warp">
-		    <!-- 容器 -->
 		    <div class="container">
 		        <div class="row">
 		            <div class="col-12">
 		                <!-- 标题栏组件 -->
-		                <div class="diy_recommend">
+		                <div class="hot-destinations">
 		                    <div class="title">
-		                        <span>疫情政策推荐 </span>
+		                        <span>🔥 热门目的地推荐</span>
 		                    </div>
 		                    <div class="more_box">
-		                        <router-link to="/epidemic_policy/list" class="more">
-		                            <span>更多</span>
+		                        <router-link to="/flight_information/list" class="more">
+		                            <span>更多航班</span>
 		                        </router-link>
 		                    </div>
-		                    <div class="switch" @click="show_list_epidemic_policy = !show_list_epidemic_policy">
-		                        <div class="switch_box">
-		                            <span v-if="show_list_epidemic_policy"> 切换表格 </span>
-		                            <span v-else> 切换列表 </span>
+		                </div>
+		                <!-- 热门目的地卡片 -->
+		                <div class="destinations-grid" v-if="hotDestinations.length > 0">
+		                    <div v-for="(dest, index) in hotDestinations" :key="index" class="destination-card" @click="searchByDestination(dest.name)">
+		                        <div class="destination-image">
+		                            <img :src="dest.image || '/img/destination-default.png'" :alt="dest.name" @error="handleImageError($event)">
+		                            <div class="destination-overlay">
+		                                <div class="destination-name">{{ dest.name }}</div>
+		                                <div class="flight-count">{{ dest.count }} 条航线</div>
+		                            </div>
 		                        </div>
 		                    </div>
 		                </div>
-		                <!--疫情政策推荐列表组件 -->
-		                <list_epidemic_policy v-if="show_list_epidemic_policy" :list="list_epidemic_policy" />
-		                <div class="overflow-auto" v-else>
-		                    <table id="list_diy" role="table" aria-busy="false"
-		                           :aria-colcount="fields_epidemic_policy.length"
-		                           class="table b-table table-striped table-hover">
-		                        <thead>
-		                        <tr>
-		                            <th v-for="(o,i) in fields_epidemic_policy" :key="i">
-		                                {{o.label}}
-		                            </th>
-		                        </tr>
-		                        </thead>
-		                        <tbody>
-		                        <tr v-for="(o, i) in list_table_epidemic_policy" :key="i" @click="to_details('epidemic_policy',o,'epidemic_policy_id')">
-		                            <td v-for="(oj,n) in fields_epidemic_policy">
-		                                <img v-if="oj.type && oj.type == '图片' " :src="$fullUrl(o[oj.key])" alt=""
-		                                     v-default-img="'/img/default.png'">
-										<span v-else-if="oj.type && oj.type == 'UID' ">
-											<span style="display: none">
-												{{get_user_by_user_id(o,oj,oj.key)}}
-											</span>
-												{{oj.value}}
-										</span>
-		                                <span v-else>{{ o[oj.key] }}</span>
-		                            </td>
-		                        </tr>
-		                        </tbody>
-		                    </table>
+		                <div v-else class="loading-placeholder">
+		                    <el-skeleton :rows="2" animated />
 		                </div>
 		            </div>
 		        </div>
 		    </div>
 		</div>
-		<!-- 推荐疫情政策模块(结束) -->
+		<!-- 热门目的地推荐模块(结束) -->
 
 		<div class="warp">
 		    <div class="container">
@@ -276,7 +285,6 @@
 <script>
 	import mixin from "@/mixins/page.js";
 	import list_flight_information from "@/components/diy/list_flight_information.vue";
-	import list_epidemic_policy from "@/components/diy/list_epidemic_policy.vue";
 	import bar_title from "@/components/diy/bar_title.vue";
 	import list_article from "@/components/diy/list_article.vue";
 	import swiper_img from "@/components/diy/swiper_img.vue";
@@ -288,7 +296,6 @@
 		mixins: [mixin],
 		components: {
 			list_flight_information,
-			list_epidemic_policy,
 			bar_title,
 			list_article,
 			swiper_img,
@@ -304,6 +311,14 @@
 				showChat: false,
 				isAdmin: false,
 				token:"",
+				// 搜索表单
+				searchForm: {
+					departure: '',
+					destination: '',
+					date: ''
+				},
+				// 热门目的地列表
+				hotDestinations: [],
 				// 文章模型数组
 				list_article: [],
 				vm_arr_article: [
@@ -331,6 +346,7 @@
 				show_list_article: true,
 				show_list_flight_information: true,
 				list_flight_information: [],
+				list_table_flight_information: [],
 				vm_arr_flight_information: [
 					"flight_information_id",
 					"place_of_departure",
@@ -402,43 +418,6 @@
 						type: "图片"
 					},
 				],
-				show_list_epidemic_policy: true,
-				list_epidemic_policy: [],
-				vm_arr_epidemic_policy: [
-					"epidemic_policy_id",
-					"area_number",
-					"region_name",
-					"date",
-					"cover",
-					"details_of_epidemic_policy",
-				],
-				fields_epidemic_policy: [
-					{
-						key: "area_number",
-						label: "地区编号",
-						type: "文本"
-					},
-					{
-						key: "region_name",
-						label: "地区名称",
-						type: "文本"
-					},
-					{
-						key: "date",
-						label: "日期",
-						type: "日期"
-					},
-					{
-						key: "cover",
-						label: "封面",
-						type: "图片"
-					},
-					{
-						key: "details_of_epidemic_policy",
-						label: "政策详情",
-						type: "多文本"
-					},
-				],
 				list_slide: [],
 				list_menu: [],
 				list_link: [],
@@ -454,12 +433,83 @@
 				let token = this.$route.query.token
 				if (token){
 					$.db.set("token",token,120);
-					location.href = "http://localhost:8081/"
+					location.href = "http://localhost:8080/"
 				}
 			},
 					// toggle
 			toToggle(){
 				this.isAdmin = !this.isAdmin;
+			},
+			// 搜索航班
+			searchFlight() {
+				const params = {};
+				if (this.searchForm.departure) {
+					params.place_of_departure = this.searchForm.departure;
+				}
+				if (this.searchForm.destination) {
+					params.destination = this.searchForm.destination;
+				}
+				if (this.searchForm.date) {
+					params.departure_time = this.searchForm.date;
+				}
+
+				// 跳转到航班列表页面并传递搜索参数
+				this.$router.push({
+					path: '/flight_information/list',
+					query: params
+				});
+			},
+			// 按目的地搜索
+			searchByDestination(destination) {
+				this.$router.push({
+					path: '/flight_information/list',
+					query: { destination: destination }
+				});
+			},
+			// 图片加载失败处理
+			handleImageError(event) {
+				event.target.src = 'https://via.placeholder.com/300x200/667eea/ffffff?text=' + encodeURIComponent(event.target.alt || '目的地');
+			},
+			// 获取热门目的地
+			get_hot_destinations() {
+				this.$get("~/api/flight_information/get_list?", {
+					page: 1,
+					size: 10000
+				}, (json) => {
+					if (json.result && json.result.list) {
+						// 统计每个目的地的航班数量
+						const destCount = {};
+						json.result.list.forEach(item => {
+							if (item.destination) {
+								const dest = item.destination;
+								destCount[dest] = (destCount[dest] || 0) + 1;
+							}
+						});
+
+						// 排序并取前8个
+						const sorted = Object.entries(destCount)
+							.sort((a, b) => b[1] - a[1])
+							.slice(0, 8);
+
+						// 使用预设的城市背景图
+						const cityImages = [
+							'https://images.unsplash.com/photo-1474181487882-5abf3f0ba6c2?w=400&h=300&fit=crop',
+							'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=400&h=300&fit=crop',
+							'https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=400&h=300&fit=crop',
+							'https://images.unsplash.com/photo-1513407030348-c983a97b98d8?w=400&h=300&fit=crop',
+							'https://images.unsplash.com/photo-1538970272646-f61fabb3a8a2?w=400&h=300&fit=crop',
+							'https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=400&h=300&fit=crop',
+							'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=400&h=300&fit=crop',
+							'https://images.unsplash.com/photo-1549144511-f099e773c147?w=400&h=300&fit=crop'
+						];
+
+						this.hotDestinations = sorted.map((item, index) => ({
+							name: item[0],
+							count: item[1],
+							image: cityImages[index] || cityImages[0]
+						}));
+					}
+				});
 			},
 			// 获取航班信息列表
 			get_flight_information() {
@@ -470,18 +520,6 @@
 				}, (json) => {
 					if (json.result) {
 						this.list_flight_information = json.result.list;
-					}
-				})
-			},
-			// 获取疫情政策列表
-			get_epidemic_policy() {
-				let url = "~/api/epidemic_policy/get_list?";
-				this.$get(url, {
-					"page": 1,
-					"size": 8
-				}, (json) => {
-					if (json.result) {
-						this.list_epidemic_policy = json.result.list;
 					}
 				})
 			},
@@ -606,7 +644,7 @@
 		},
 		mounted() {
 			this.get_flight_information();
-			this.get_epidemic_policy();
+			this.get_hot_destinations();
 			this.get_menu();
 			this.get_slides();
 			this.get_article();
@@ -621,18 +659,6 @@
 		        for (let i = 0; i < list.length; i++) {
 		            list_table[i] = {};
 		            this.vm_arr_flight_information.map((o) => {
-		                // 第二个中括号是对象的属性
-		                list_table[i][o] = list[i][o] || "";
-		            });
-		        }
-		        return list_table;
-		    },
-		    list_table_epidemic_policy() {
-		        var list = this.list_epidemic_policy;
-		        var list_table = [];
-		        for (let i = 0; i < list.length; i++) {
-		            list_table[i] = {};
-		            this.vm_arr_epidemic_policy.map((o) => {
 		                // 第二个中括号是对象的属性
 		                list_table[i][o] = list[i][o] || "";
 		            });
@@ -987,6 +1013,124 @@
 
 	.card_ad {
 	    margin-top: 1rem;
+	}
+
+	/* 搜索栏样式 */
+	.flight-search-bar {
+	    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	    border-radius: 1rem;
+	    padding: 2rem;
+	    margin: 1.5rem 0.5rem 1rem;
+	    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+	}
+
+	.search-title {
+	    color: white;
+	    font-size: 1.5rem;
+	    font-weight: bold;
+	    margin-bottom: 1.5rem;
+	    text-align: center;
+	}
+
+	.search-form {
+	    display: flex;
+	    gap: 1rem;
+	    flex-wrap: wrap;
+	    align-items: flex-end;
+	}
+
+	.search-field {
+	    flex: 1;
+	    min-width: 200px;
+	}
+
+	.search-field label {
+	    display: block;
+	    color: white;
+	    font-size: 0.9rem;
+	    margin-bottom: 0.5rem;
+	    font-weight: 500;
+	}
+
+	.search-button {
+	    display: flex;
+	    align-items: flex-end;
+	}
+
+	.search-button .el-button {
+	    width: 100%;
+	    min-width: 150px;
+	    height: 40px;
+	    font-size: 1rem;
+	}
+
+	/* 热门目的地样式 */
+	.hot-destinations {
+	    display: block;
+	    margin: 1.5rem 0.5rem 1rem;
+	    height: 4rem;
+	    border-radius: 0.5rem;
+	    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+	}
+
+	.destinations-grid {
+	    display: grid;
+	    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+	    gap: 1.5rem;
+	    padding: 0 0.5rem 1.5rem;
+	}
+
+	.destination-card {
+	    position: relative;
+	    height: 200px;
+	    border-radius: 1rem;
+	    overflow: hidden;
+	    cursor: pointer;
+	    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+	    transition: all 0.3s ease;
+	}
+
+	.destination-card:hover {
+	    transform: translateY(-5px);
+	    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+	}
+
+	.destination-image {
+	    width: 100%;
+	    height: 100%;
+	    position: relative;
+	}
+
+	.destination-image img {
+	    width: 100%;
+	    height: 100%;
+	    object-fit: cover;
+	}
+
+	.destination-overlay {
+	    position: absolute;
+	    bottom: 0;
+	    left: 0;
+	    right: 0;
+	    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+	    padding: 1.5rem 1rem 1rem;
+	    color: white;
+	}
+
+	.destination-name {
+	    font-size: 1.2rem;
+	    font-weight: bold;
+	    margin-bottom: 0.5rem;
+	}
+
+	.flight-count {
+	    font-size: 0.9rem;
+	    opacity: 0.9;
+	}
+
+	.loading-placeholder {
+	    padding: 2rem;
+	    text-align: center;
 	}
 
 	@media (max-width: 996px) {

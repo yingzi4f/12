@@ -452,7 +452,7 @@ router.beforeEach((to, from, next) => {
 })
 
 router.afterEach((to, from, next) => {
-	let title = "基于Hadoop的航空购票管理系统-admin";
+	let title = "基于Hadoop的航班分析系统的设计与实现-admin";
 	document.title = title;
 })
 

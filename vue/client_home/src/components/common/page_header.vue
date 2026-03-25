@@ -17,6 +17,16 @@
                                             </router-link>
                                         </li>
                                         <li>
+                                            <router-link to="/flight/booking">
+                                                航空购票
+                                            </router-link>
+                                        </li>
+                                        <li>
+                                            <router-link to="/flight/info">
+                                                航空信息
+                                            </router-link>
+                                        </li>
+                                        <li>
                                             <router-link v-if="$check_action('/forum/list','get')" to="/forum/list">在线留言
                                             </router-link>
                                         </li>
@@ -27,7 +37,7 @@
                                         </li>
                                         <li>
                                           <router-link to="/article/list">
-                                            {{$page_title("/article/list") || "新闻通知"}}
+                                            {{$page_title("/article/list") || "航空资讯"}}
                                           </router-link>
                                         </li>
                                         <li v-if="nav_top && i < top_max" v-for="(o,i) in nav_top" v-bind:key="i">
@@ -171,7 +181,7 @@
 					var arr = [];
             		for(var i=0;i<auth.length;i++){
             			var o = auth[i];
-            			if(o["position"] == "top"){
+            			if(o["position"] == "top" && o["table_name"] !== "epidemic_policy"){
             				arr.push(o);
             			}
             		}
@@ -185,7 +195,8 @@
 						"page": ""
             		});
 					if(res.result && res.result.list){
-            			this.nav_top = res.result.list;
+						// 过滤掉疫情政策
+						this.nav_top = res.result.list.filter(item => item.table_name !== "epidemic_policy");
             		}
             	}
             },

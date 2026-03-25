@@ -65,6 +65,12 @@
 						selected: false,
 					},
 					{
+						title: "我的订单",
+						url: "/user/order",
+						icon: "cart-fill",
+						selected: false,
+					},
+					{
 						title: "密码修改",
 						url: "/user/password",
 						icon: "person-fill",

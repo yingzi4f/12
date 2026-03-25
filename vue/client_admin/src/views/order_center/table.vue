@@ -103,6 +103,9 @@
 			</el-table-column>
 			<el-table-column
 			prop="seat"	label="座位" v-if="user_group == '管理员' || $check_field('get', 'seat')"	min-width="200">
+				<template slot-scope="scope">
+					{{ formatSeatDisplay(scope.row.seat) }}
+				</template>
 			</el-table-column>
 			<el-table-column fixed="right" label="操作" min-width="120" v-if="user_group == '管理员' || $check_action('/order_center/table','set') || $check_action('/order_center/view','set') || $check_action('/order_center/view','get') || $check_action('/退票|升舱申请|机票改签/table','add') || $check_action('/退票|升舱申请|机票改签/view','add')" >
 
@@ -453,6 +456,32 @@
 			},
 			deleteRow(index, rows) {
 				rows.splice(index, 1);
+			},
+
+			// 格式化座位显示
+			formatSeatDisplay(seatStr) {
+				if (!seatStr) return '-';
+
+				try {
+					const seatIndices = seatStr.split(',');
+					const columns = ['A', 'B', 'C', 'D', 'E', 'F'];
+					const seatNames = [];
+
+					seatIndices.forEach(index => {
+						const num = parseInt(index.trim());
+						if (!isNaN(num)) {
+							const row = Math.floor(num / 6) + 1;
+							const col = num % 6;
+							const seatName = `${row}${columns[col]}`;
+							seatNames.push(seatName);
+						}
+					});
+
+					return seatNames.length > 0 ? seatNames.join(', ') : seatStr;
+				} catch (e) {
+					console.error('座位格式化错误:', e);
+					return seatStr;
+				}
 			}
 
 		},
